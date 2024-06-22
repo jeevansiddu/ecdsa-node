@@ -1,7 +1,9 @@
 import { useState } from "react";
 import server from "./server";
+import { signMessage } from "../utils/sign";
+import { v4 as uuidv4 } from "uuid";
 
-function Transfer({ address, setBalance }) {
+function Transfer({ address, privateKey, setBalance }) {
   const [sendAmount, setSendAmount] = useState("");
   const [recipient, setRecipient] = useState("");
 
@@ -11,16 +13,24 @@ function Transfer({ address, setBalance }) {
     evt.preventDefault();
 
     try {
-      const {
-        data: { balance },
-      } = await server.post(`send`, {
-        sender: address,
-        amount: parseInt(sendAmount),
-        recipient,
+      const tx = {
+        txn_id: uuidv4(),
+        from: address,
+        to: recipient,
+        value: sendAmount,
+      };
+
+      const message = JSON.stringify(tx);
+      const signature = await signMessage(privateKey, message);
+      tx["signature"] = signature;
+
+      const res = await server.post(`send`, {
+        ...tx,
       });
-      setBalance(balance);
+
+      setBalance(res.data.balance);
     } catch (ex) {
-      alert(ex.response.data.message);
+      alert(ex.message);
     }
   }
 

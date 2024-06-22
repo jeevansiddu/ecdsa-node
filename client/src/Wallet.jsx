@@ -1,16 +1,33 @@
 import server from "./server";
+import { secp256k1 } from "ethereum-cryptography/secp256k1.js";
+import { keccak256 } from "ethereum-cryptography/keccak.js";
+import { toHex } from "ethereum-cryptography/utils";
 
-function Wallet({ address, setAddress, balance, setBalance }) {
+function Wallet({
+  address,
+  setAddress,
+  balance,
+  setBalance,
+  privateKey,
+  setPrivateKey,
+}) {
   async function onChange(evt) {
-    const address = evt.target.value;
-    setAddress(address);
-    if (address) {
-      const {
-        data: { balance },
-      } = await server.get(`balance/${address}`);
-      setBalance(balance);
-    } else {
-      setBalance(0);
+    try {
+      const prvKey = evt.target.value;
+      setPrivateKey(prvKey);
+      const pubKey = secp256k1.getPublicKey(prvKey, false);
+      setAddress(toHex(pubKey));
+
+      if (address) {
+        const {
+          data: { balance },
+        } = await server.get(`balance/${address}`);
+        setBalance(balance);
+      } else {
+        setBalance(0);
+      }
+    } catch (err) {
+      console.log(err.message, evt.target.value);
     }
   }
 
@@ -19,9 +36,15 @@ function Wallet({ address, setAddress, balance, setBalance }) {
       <h1>Your Wallet</h1>
 
       <label>
-        Wallet Address
-        <input placeholder="Type an address, for example: 0x1" value={address} onChange={onChange}></input>
+        Private Key
+        <input
+          placeholder="Type your wallet private key to import your account:"
+          value={privateKey}
+          onChange={onChange}
+        ></input>
       </label>
+
+      <p>{address}</p>
 
       <div className="balance">Balance: {balance}</div>
     </div>
